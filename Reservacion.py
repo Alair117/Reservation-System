@@ -14,15 +14,14 @@ class Mesa:
         estado_vip = " (VIP)" if self.es_vip else ""
         return f"Mesa {self.numero}{estado_vip}"
 
-    def inicializar_dia(self, fecha_str):
-        """Inicializa la disponibilidad para un día dado."""
+    def inicializar_dia(self, fecha_str, horario_inicio, horario_fin):
+        """Inicializa la disponibilidad para un día dado con el rango de horas especificado."""
         if fecha_str not in self.disponibilidad:
-            # Horario de 13:00 a 17:00
-            self.disponibilidad[fecha_str] = {hora: True for hora in range(13, 18)} # 13, 14, 15, 16, 17
+            self.disponibilidad[fecha_str] = {hora: True for hora in range(horario_inicio, horario_fin + 1)}
 
-    def reservar_hora(self, fecha_str, hora):
+    def reservar_hora(self, fecha_str, hora, horario_inicio, horario_fin):
         """Marca una hora como reservada para una fecha específica."""
-        self.inicializar_dia(fecha_str) # Asegura que el día esté inicializado
+        self.inicializar_dia(fecha_str, horario_inicio, horario_fin) # Asegura que el día esté inicializado
         if hora in self.disponibilidad[fecha_str] and self.disponibilidad[fecha_str][hora]:
             self.disponibilidad[fecha_str][hora] = False
             return True
@@ -35,9 +34,9 @@ class Mesa:
             return True
         return False # No se encontró la hora para liberar
 
-    def esta_disponible(self, fecha_str, hora):
+    def esta_disponible(self, fecha_str, hora, horario_inicio, horario_fin):
         """Verifica si la mesa está disponible en una hora y fecha específicas."""
-        self.inicializar_dia(fecha_str) # Asegura que el día esté inicializado
+        self.inicializar_dia(fecha_str, horario_inicio, horario_fin) # Asegura que el día esté inicializado
         return self.disponibilidad.get(fecha_str, {}).get(hora, False) # Retorna False si no existe la hora o fecha
 
 
@@ -61,15 +60,18 @@ class Reserva:
 
 class Restaurante:
     """Gestiona las mesas y las reservaciones del restaurante."""
-    def __init__(self, num_mesas_normales=5, num_mesas_vip=2):
+    def __init__(self):
         self.mesas = []
-        for i in range(1, num_mesas_normales + 1):
-            self.mesas.append(Mesa(i))
-        for i in range(1, num_mesas_vip + 1):
-            self.mesas.append(Mesa(num_mesas_normales + i, es_vip=True))
+        # 5 mesas en zona general (numeradas del 1 al 5)
+        for i in range(1, 6):
+            self.mesas.append(Mesa(i, es_vip=False))
+        # 5 mesas VIP (numeradas del 6 al 10, o con un prefijo especial para distinguirlas si se desea)
+        for i in range(1, 6): # Usaremos números 6-10 para VIP
+            self.mesas.append(Mesa(5 + i, es_vip=True))
+
         self.reservas = []
-        self.horario_inicio = 13
-        self.horario_fin = 17 # Hasta las 17:00, por lo que el rango es hasta 17
+        self.horario_inicio = 13 # Primera hora de reserva
+        self.horario_fin = 16    # Última hora de inicio de reserva (16:00-17:00)
 
     def _validar_hora(self, hora):
         return self.horario_inicio <= hora <= self.horario_fin
@@ -92,13 +94,15 @@ class Restaurante:
 
         print(f"\n--- Disponibilidad para el {fecha_str} ---")
         disponibilidad_encontrada = False
-        for mesa in sorted(self.mesas, key=lambda m: (not m.es_vip, m.numero)): # VIP primero
-            mesa.inicializar_dia(fecha_str) # Asegura que el día esté inicializado para todas las mesas
+        # Ordenar: VIP primero, luego por número de mesa
+        for mesa in sorted(self.mesas, key=lambda m: (not m.es_vip, m.numero)):
+            # Inicializar el día para la mesa si no existe, con el horario correcto
+            mesa.inicializar_dia(fecha_str, self.horario_inicio, self.horario_fin)
             print(f"\n{mesa}:")
             horas_disponibles_mesa = []
             for hora in range(self.horario_inicio, self.horario_fin + 1):
-                estado = "Disponible" if mesa.esta_disponible(fecha_str, hora) else "Reservado"
-                horas_disponibles_mesa.append(f" {hora}:00 -> {estado}")
+                estado = "Disponible" if mesa.esta_disponible(fecha_str, hora, self.horario_inicio, self.horario_fin) else "Reservado"
+                horas_disponibles_mesa.append(f" {hora}:00-{hora+1}:00 -> {estado}")
                 disponibilidad_encontrada = True
             print("".join(horas_disponibles_mesa))
 
@@ -122,7 +126,7 @@ class Restaurante:
             print("❌ Error: Formato de fecha inválido. Use YYYY-MM-DD.")
             return None
         if not self._validar_hora(hora):
-            print(f"❌ Error: Hora inválida. El horario laboral es de {self.horario_inicio}:00 a {self.horario_fin}:00.")
+            print(f"❌ Error: Hora inválida. El horario de reservas es de {self.horario_inicio}:00 a {self.horario_fin}:00.")
             return None
 
         mesa_seleccionada = None
@@ -135,12 +139,12 @@ class Restaurante:
             print(f"❌ Error: Mesa {numero_mesa} no encontrada.")
             return None
 
-        if not mesa_seleccionada.esta_disponible(fecha_str, hora):
+        if not mesa_seleccionada.esta_disponible(fecha_str, hora, self.horario_inicio, self.horario_fin):
             print(f"❌ Error: La mesa {numero_mesa} no está disponible el {fecha_str} a las {hora}:00.")
             return None
 
         # Proceso estándar: Reservar la mesa
-        if mesa_seleccionada.reservar_hora(fecha_str, hora):
+        if mesa_seleccionada.reservar_hora(fecha_str, hora, self.horario_inicio, self.horario_fin):
             nueva_reserva = Reserva(cliente_nombre, fecha_str, hora, mesa_seleccionada)
             self.reservas.append(nueva_reserva)
             print(f"✅ ¡Reservación exitosa! {nueva_reserva}")
@@ -154,7 +158,7 @@ class Restaurante:
         Caso de Uso: Eliminar reservación
         Permite al empleado eliminar una reservación.
         """
-        # Precondición: Campos requeridos (aunque tus tablas no lo indican explícitamente para error, es buena práctica)
+        # Precondición: Campos requeridos
         if not all([fecha_str, hora, folio_mesa]):
             print("❌ Error: Por favor, complete todos los datos para eliminar la reserva.")
             return False
@@ -164,7 +168,7 @@ class Restaurante:
             print("❌ Error: Formato de fecha inválido. Use YYYY-MM-DD.")
             return False
         if not self._validar_hora(hora):
-            print(f"❌ Error: Hora inválida. El horario laboral es de {self.horario_inicio}:00 a {self.horario_fin}:00.")
+            print(f"❌ Error: Hora inválida. El horario de reservas es de {self.horario_inicio}:00 a {self.horario_fin}:00.")
             return False
 
         reserva_encontrada = None
@@ -183,7 +187,7 @@ class Restaurante:
 
         # Confirmación (simulada)
         confirmacion = input(f"¿Está seguro que desea eliminar la reserva de {reserva_encontrada.cliente_nombre} "
-                             f"para la mesa {reserva_encontrada.mesa.numero} el {fecha_encontrada} a las {hora_encontrada}:00? (s/n): ").lower()
+                             f"para la mesa {reserva_encontrada.mesa.numero} el {reserva_encontrada.fecha_str} a las {reserva_encontrada.hora}:00? (s/n): ").lower()
         if confirmacion != 's':
             print("🚫 Eliminación cancelada.")
             return False
@@ -192,8 +196,6 @@ class Restaurante:
         self.reservas.remove(reserva_encontrada)
         reserva_encontrada.mesa.liberar_hora(fecha_str, hora)
         print(f"✅ Reservación para '{reserva_encontrada.cliente_nombre}' eliminada exitosamente.")
-        # La postcondición indica "el sistema muestra la mesa como 'disponible' en la opción del menú 'Ver Disponibilidad'"
-        # Esto ya lo maneja Mesa.liberar_hora y se reflejaría en la próxima llamada a ver_disponibilidad.
         return True
 
 # --- Simulación de la interacción del Empleado (Main Program) ---
@@ -207,7 +209,7 @@ def mostrar_menu():
     print("-----------------------------------")
 
 if __name__ == "__main__":
-    restaurante = Restaurante(num_mesas_normales=3, num_mesas_vip=1) # Por ejemplo, 3 mesas normales y 1 VIP
+    restaurante = Restaurante() # Ahora el Restaurante crea las 10 mesas automáticamente
 
     while True:
         mostrar_menu()
@@ -243,18 +245,9 @@ if __name__ == "__main__":
                 print("❌ Hora inválida. Debe ser un número entero.")
                 continue
 
-            # Buscar la reserva para obtener los datos exactos que se requieren para confirmar al usuario
-            reserva_a_eliminar = None
-            for r in restaurante.reservas:
-                if r.folio == folio_eliminar and r.fecha_str == fecha_eliminar and r.hora == hora_eliminar:
-                    reserva_a_eliminar = r
-                    break
-
-            if reserva_a_eliminar:
-                # Se pasa la información que se necesita para encontrarla, no el objeto entero
-                restaurante.eliminar_reservacion(fecha_eliminar, hora_eliminar, folio_eliminar)
-            else:
-                print(f"❌ Error: No se encontró una reserva con el folio '{folio_eliminar}' para el {fecha_eliminar} a las {hora_eliminar}:00.")
+            # No es necesario buscar la reserva aquí si la lógica de eliminar_reservacion ya lo hace.
+            # Simplemente llamamos a la función con los parámetros de entrada.
+            restaurante.eliminar_reservacion(fecha_eliminar, hora_eliminar, folio_eliminar)
 
         elif opcion == '4':
             print("Saliendo del sistema. ¡Hasta luego!")
