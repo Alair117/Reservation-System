@@ -11,173 +11,131 @@
 # Reservacion.py
 
 
-
 import datetime
 
-# Importa la biblioteca datetime para manejar fechas y horas (necesario para las reservaciones).
-# Es mucho mejor que usar solo cadenas de carácteres para validaciones y operaciones con fechas.
+# Importa el módulo datetime para manejar fechas y horas.
 
+# --- CLASES ---
 
-class Mesa:
+class MesaBase:
     """
-    Clase Mesa: Representa una mesa individual en el restaurante.
-    Encapsulamiento: Agrupa los datos (número, si es VIP, disponibilidad) y
-    los comportamientos (reservar, liberar, verificar disponibilidad) relacionados con una mesa.
-    Su estado interno (self.disponibilidad) es gestionado a través de sus métodos públicos.
+    Clase Base para representar cualquier tipo de mesa en el restaurante.
+    Encapsulamiento: Agrupa los datos fundamentales de una mesa (número, disponibilidad) y
+    los comportamientos básicos de gestión de su estado de disponibilidad.
     """
 
-    def __init__(self, numero, es_vip=False):
+    def __init__(self, numero):
         """
-        Constructor de la clase Mesa.
-        Se llama automáticamente cuando se crea una nueva instancia/objeto de Mesa.
-
+        Constructor de la clase MesaBase.
         Args:
             numero (int): El número identificador único de la mesa.
-            es_vip (bool): True si la mesa es VIP, False en caso contrario. Por defecto es False.
         """
         self.numero = numero
-        # Atributo público: Almacena el número de la mesa.
-        self.es_vip = es_vip
-        # Atributo público: Almacena si la mesa es VIP.
-        self.disponibilidad = {}
-        # Atributo que gestiona la disponibilidad de la mesa.
-        # Es un diccionario donde:
-        # - La clave externa es la fecha (string en formato 'YYYY-MM-DD').
-        # - El valor es otro diccionario: {hora (int): True/False (disponible/reservado)}.
-        # Ejemplo: {'2025-07-03': {13: True, 14: False, 15: True, 16: True}}
-        # El acceso y modificación de este atributo están controlados por los métodos de esta clase,
-        # lo que es clave para el encapsulamiento.
+        self.disponibilidad = {} # Gestionado internamente.
 
     def __str__(self):
         """
-        Método especial que define la representación en cadena del objeto Mesa.
-        Se llama automáticamente cuando se usa print() con un objeto Mesa.
+        Método especial para la representación en cadena.
+        Este será sobrescrito por las clases hijas para añadir especificidad.
         """
-        estado_vip = " (VIP)" if self.es_vip else ""
-        return f"Mesa {self.numero}{estado_vip}"
-        # Devuelve una cadena legible para identificar la mesa (ej., "Mesa 1", "Mesa 6 (VIP)").
+        return f"Mesa {self.numero}"
 
     def inicializar_dia(self, fecha_str, horario_inicio, horario_fin):
         """
-        Método público: Inicializa la disponibilidad de la mesa para un día específico.
-        Si la fecha no ha sido gestionada antes, se crea y se marcan todas las horas
-        dentro del horario de trabajo como disponibles.
-
-        Args:
-            fecha_str (str): La fecha a inicializar (formato 'YYYY-MM-DD').
-            horario_inicio (int): La primera hora de inicio de reserva (ej., 13).
-            horario_fin (int): La última hora de inicio de reserva (ej., 16).
+        Método público: Inicializa la disponibilidad para un día específico.
         """
         if fecha_str not in self.disponibilidad:
-            # Si la fecha no está en el diccionario de disponibilidad de la mesa...
-            # Se crean entradas para todas las horas dentro del rango definido por el restaurante.
             self.disponibilidad[fecha_str] = {hora: True for hora in range(horario_inicio, horario_fin + 1)}
-            # Todas las horas se establecen inicialmente como True (disponible).
 
     def reservar_hora(self, fecha_str, hora, horario_inicio, horario_fin):
         """
-        Método público: Intenta marcar una hora específica como reservada para esta mesa en una fecha dada.
-        Encapsulamiento: Este método es la interfaz controlada para cambiar el estado de disponibilidad de la mesa.
-        Maneja la lógica interna de cómo se actualiza la disponibilidad.
-
-        Args:
-            fecha_str (str): La fecha de la reserva (formato 'YYYY-MM-DD').
-            hora (int): La hora de inicio de la reserva (ej., 13 para 13:00-14:00).
-            horario_inicio (int): La primera hora de inicio de reserva.
-            horario_fin (int): La última hora de inicio de reserva.
-
-        Returns:
-            bool: True si la reserva fue exitosa (la hora estaba disponible), False en caso contrario.
+        Método público: Intenta marcar una hora como reservada.
+        Encapsulamiento: Controla cómo se modifica el estado de disponibilidad.
         """
-        self.inicializar_dia(fecha_str, horario_inicio, horario_fin)
-        # Asegura que el día esté configurado en el diccionario de disponibilidad de la mesa.
-
-        # Verifica si la hora está dentro de las horas gestionadas y si está actualmente disponible.
+        self.inicializar_day(fecha_str, horario_inicio, horario_fin)
         if hora in self.disponibilidad[fecha_str] and self.disponibilidad[fecha_str][hora]:
-            self.disponibilidad[fecha_str][hora] = False  # Marca la hora como reservada (False).
-            return True  # Indica éxito.
-        return False  # Indica que la hora no estaba disponible o es inválida.
+            self.disponibilidad[fecha_str][hora] = False
+            return True
+        return False
 
     def liberar_hora(self, fecha_str, hora):
         """
-        Método público: Marca una hora previamente reservada como disponible para esta mesa.
-        Encapsulamiento: La forma controlada de "deshacer" una reserva en el estado interno de la mesa.
-
-        Args:
-            fecha_str (str): La fecha de la reserva a liberar.
-            hora (int): La hora de la reserva a liberar.
-
-        Returns:
-            bool: True si la hora se liberó exitosamente, False si no se encontró la reserva.
+        Método público: Libera una hora previamente reservada.
+        Encapsulamiento: Controla cómo se modifica el estado de disponibilidad.
         """
         if fecha_str in self.disponibilidad and hora in self.disponibilidad[fecha_str]:
-            # Verifica si la fecha y la hora existen en los registros de disponibilidad.
-            self.disponibilidad[fecha_str][hora] = True  # Marca la hora como disponible (True).
-            return True  # Indica éxito.
-        return False  # Indica que la fecha o la hora no se encontraron para liberar.
+            self.disponibilidad[fecha_str][hora] = True
+            return True
+        return False
 
     def esta_disponible(self, fecha_str, hora, horario_inicio, horario_fin):
         """
-        Método público: Verifica si la mesa está disponible en una hora y fecha específicas.
-        Encapsulamiento: La interfaz para consultar el estado interno de la mesa sin modificarlo.
-
-        Args:
-            fecha_str (str): La fecha a consultar.
-            hora (int): La hora a consultar.
-            horario_inicio (int): La primera hora de inicio de reserva.
-            horario_fin (int): La última hora de inicio de reserva.
-
-        Returns:
-            bool: True si la mesa está disponible en esa hora y fecha, False en caso contrario.
+        Método público: Consulta la disponibilidad de la mesa.
+        Encapsulamiento: Controla cómo se accede al estado de disponibilidad.
         """
         self.inicializar_dia(fecha_str, horario_inicio, horario_fin)
-        # Asegura que el día esté inicializado para poder consultar su disponibilidad.
-        # Utiliza .get() para acceder de forma segura a los diccionarios anidados.
-        # Si la fecha o la hora no existen, .get() devuelve el valor por defecto (False),
-        # lo que significa que la mesa no está disponible.
         return self.disponibilidad.get(fecha_str, {}).get(hora, False)
+
+    # Nuevo método para obtener si es VIP, útil para el folio de reserva
+    # Esto es un "getter" básico para un atributo.
+    def es_vip_mesa(self):
+        """Método abstracto que las subclases deben implementar."""
+        raise NotImplementedError("Las subclases deben implementar este método para indicar si son VIP.")
+
+
+class MesaGeneral(MesaBase):
+    """
+    Clase hija: Representa una mesa de la zona general.
+    Herencia: Hereda de MesaBase.
+    Polimorfismo: Sobreescribe __str__ para su representación específica.
+    """
+    def __init__(self, numero):
+        super().__init__(numero) # Llama al constructor de la clase padre.
+
+    def __str__(self):
+        return f"Mesa {self.numero} (General)" # Representación específica para mesas generales.
+
+    def es_vip_mesa(self):
+        return False
+
+
+class MesaVIP(MesaBase):
+    """
+    Clase hija: Representa una mesa de la zona VIP.
+    Herencia: Hereda de MesaBase.
+    Polimorfismo: Sobreescribe __str__ para su representación específica.
+    """
+    def __init__(self, numero):
+        super().__init__(numero) # Llama al constructor de la clase padre.
+
+    def __str__(self):
+        return f"Mesa {self.numero} (VIP)" # Representación específica para mesas VIP.
+
+    def es_vip_mesa(self):
+        return True
 
 
 class Reserva:
     """
-    Clase Reserva: Representa una reservación hecha por un cliente.
-    Encapsulamiento: Agrupa todos los detalles de una reserva (cliente, fecha, hora, mesa, folio)
-    y la lógica para generar su folio. Los datos de la reserva se mantienen juntos.
+    Clase Reserva: Representa una reservación.
+    Encapsulamiento: Agrupa los detalles de la reserva y la lógica de folio.
     """
-
     def __init__(self, cliente_nombre, fecha_str, hora, mesa):
-        """
-        Constructor de la clase Reserva.
-
-        Args:
-            cliente_nombre (str): Nombre del cliente que realiza la reserva.
-            fecha_str (str): La fecha de la reserva (formato 'YYYY-MM-DD').
-            hora (int): La hora de inicio de la reserva.
-            mesa (Mesa): El objeto Mesa que ha sido reservado. (Asociación: una Reserva "tiene una" Mesa).
-        """
         self.cliente_nombre = cliente_nombre
-        # Atributo público: Nombre del cliente.
         self.fecha_str = fecha_str
-        # Atributo público: Fecha de la reserva.
         self.hora = hora
-        # Atributo público: Hora de la reserva.
-        self.mesa = mesa
-        # Atributo público: Referencia al objeto Mesa asociado a esta reserva.
-        self.folio = self._generar_folio()
-        # Atributo público: Folio único de la reserva, generado automáticamente.
+        self.mesa = mesa # Referencia al objeto Mesa (MesaGeneral o MesaVIP).
+        self.folio = self._generar_folio() # Genera folio usando el método interno.
 
     def _generar_folio(self):
         """
-        Método "protegido" (por convención, debido al prefijo '_').
-        Encapsulamiento: Este método está diseñado para ser utilizado internamente
-        por el constructor de la clase para asegurar que el folio se genere
-        de manera consistente y controlada. No se espera que se llame directamente
-        desde fuera de un objeto Reserva.
+        Método "protegido": Genera el folio de la reserva.
+        Encapsulamiento: Lógica interna para la generación del folio.
+        Polimorfismo (implícito): Usa el método es_vip_mesa() de la mesa,
+        que se comporta diferente si la mesa es MesaVIP o MesaGeneral.
         """
-        prefijo = "VX" if self.mesa.es_vip else "GX"
-        # Determina el prefijo del folio: 'VX' para VIP, 'GX' para General.
+        prefijo = "VX" if self.mesa.es_vip_mesa() else "GX"
         return f"{prefijo}{self.mesa.numero}"
-        # Retorna el folio combinando el prefijo y el número de la mesa.
 
     def __str__(self):
         """
@@ -189,51 +147,41 @@ class Reserva:
 
 class Restaurante:
     """
-    Clase Restaurante: Actúa como el sistema principal de gestión de reservas.
-    Clase Controladora: Coordina las interacciones entre los objetos Mesa y Reserva.
-    Encapsulamiento: Encapsula la colección de todas las mesas y reservas,
-    y proporciona los métodos públicos que corresponden a los casos de uso
-    (la interfaz del sistema para el "Empleado").
-    La lógica interna de cómo se gestionan las colecciones o las validaciones está oculta.
+    Clase Restaurante: Gestiona mesas y reservaciones.
+    Clase Controladora: Coordina las interacciones.
+    Encapsulamiento: Oculta las colecciones de mesas y reservas y su gestión interna.
+    Abstracción: Los métodos de caso de uso (ver_disponibilidad, hacer_reservacion, eliminar_reservacion)
+                 ocultan la complejidad subyacente.
     """
 
     def __init__(self):
         """
         Constructor de la clase Restaurante.
-        Inicializa la lista de mesas (5 generales, 5 VIP) y la lista de reservas.
-        Define el horario de operación para las reservas.
+        Inicializa la lista de mesas (usando las clases hijas) y la lista de reservas.
         """
         self.mesas = []
-        # Lista para almacenar todos los objetos Mesa del restaurante.
-
-        # Creación de 5 mesas en zona general (numeradas del 1 al 5).
+        # Crea 5 mesas generales (numeradas del 1 al 5)
         for i in range(1, 6):
-            self.mesas.append(Mesa(i, es_vip=False))
-
-        # Creación de 5 mesas VIP (numeradas del 6 al 10).
-        # Se les asigna un número de mesa a partir del 6 para distinguirlas.
+            self.mesas.append(MesaGeneral(i)) # Instancia de MesaGeneral
+        # Crea 5 mesas VIP (numeradas del 6 al 10)
         for i in range(1, 6):
-            self.mesas.append(Mesa(5 + i, es_vip=True))
+            self.mesas.append(MesaVIP(5 + i)) # Instancia de MesaVIP
 
         self.reservas = []
-        # Lista para almacenar todos los objetos Reserva creados en el sistema.
-
-        self.horario_inicio = 13  # La primera hora de inicio de reserva (13:00 para 13:00-14:00).
-        self.horario_fin = 16     # La última hora de inicio de reserva (16:00 para 16:00-17:00).
-                                  # Esto define las 4 franjas de una hora.
+        self.horario_inicio = 13
+        self.horario_fin = 16
 
     def _validar_hora(self, hora):
         """
-        Método "protegido": Valida si una hora dada está dentro del horario de reservas del restaurante.
-        Encapsulamiento: Es un método auxiliar interno, no parte de la interfaz pública del sistema.
-        La lógica de validación de horarios está encapsulada aquí.
+        Método "protegido": Valida si una hora está dentro del horario.
+        Encapsulamiento: Lógica auxiliar interna.
         """
         return self.horario_inicio <= hora <= self.horario_fin
 
     def _validar_fecha(self, fecha_str):
         """
-        Método "protegido": Valida si una cadena de texto tiene el formato de fecha 'YYYY-MM-DD' válido.
-        Encapsulamiento: Otro método auxiliar interno para la validación de entrada.
+        Método "protegido": Valida el formato de la fecha.
+        Encapsulamiento: Lógica auxiliar interna.
         """
         try:
             datetime.datetime.strptime(fecha_str, "%Y-%m-%d")
@@ -243,31 +191,29 @@ class Restaurante:
 
     def ver_disponibilidad(self, fecha_str):
         """
-        Método público: Implementa el Caso de Uso "Ver disponibilidad".
-        Permite al empleado visualizar la disponibilidad de mesas para un día específico.
-        Encapsulamiento: Oculta la complejidad de iterar sobre mesas y sus estados internos.
+        Caso de Uso: Ver disponibilidad.
+        Polimorfismo: Itera sobre objetos MesaBase (que pueden ser MesaGeneral o MesaVIP)
+                      y llama a sus métodos, como __str__ y esta_disponible, que se comportan
+                      de forma polimórfica según el tipo real del objeto.
         """
-        # Precondición: El formato de la fecha debe ser válido.
         if not self._validar_fecha(fecha_str):
-            print("❌ Error: Formato de fecha inválido. Use YYYY-MM-DD.")
+            print("❌ Error: Formato de fecha inválido. UsebeginPath-MM-DD.")
             return
 
         print(f"\n--- Disponibilidad para el {fecha_str} ---")
-        disponibilidad_encontrada = False # Bandera para saber si se mostró algo.
+        disponibilidad_encontrada = False
 
-        # Itera sobre todas las mesas, ordenándolas: VIP primero, luego por número.
-        for mesa in sorted(self.mesas, key=lambda m: (not m.es_vip, m.numero)):
-            # Asegura que el día esté inicializado para cada mesa antes de mostrar su disponibilidad.
+        # El ordenamiento se hace por si es VIP y luego por número de mesa
+        for mesa in sorted(self.mesas, key=lambda m: (not m.es_vip_mesa(), m.numero)):
             mesa.inicializar_dia(fecha_str, self.horario_inicio, self.horario_fin)
+            # Polimorfismo: Aquí, `mesa.__str__()` se llamará automáticamente,
+            # lo que significa que se ejecutará el __str__ de MesaGeneral o MesaVIP.
             print(f"\n{mesa}:")
             horas_disponibles_mesa = []
-            # Itera sobre las horas del horario de reservas para cada mesa.
             for hora in range(self.horario_inicio, self.horario_fin + 1):
-                # Utiliza el método encapsulado de la clase Mesa para verificar su estado.
                 estado = "Disponible" if mesa.esta_disponible(fecha_str, hora, self.horario_inicio, self.horario_fin) else "Reservado"
-                # Formatea la salida para mostrar los intervalos de una hora.
                 horas_disponibles_mesa.append(f" {hora}:00-{hora+1}:00 -> {estado}")
-                disponibilidad_encontrada = True # Marca que se encontró disponibilidad.
+                disponibilidad_encontrada = True
             print("".join(horas_disponibles_mesa))
 
         if not disponibilidad_encontrada:
@@ -276,114 +222,93 @@ class Restaurante:
 
     def hacer_reservacion(self, cliente_nombre, fecha_str, hora, numero_mesa):
         """
-        Método público: Implementa el Caso de Uso "Hacer reservación".
-        Permite al empleado generar una nueva reservación.
-        Encapsulamiento: Proporciona una interfaz para crear reservas, ocultando
-        toda la lógica de validación, búsqueda de mesa, y actualización de estados.
+        Caso de Uso: Hacer reservación.
+        Polimorfismo: Se interactúa con la `mesa_seleccionada` (que es de tipo MesaBase)
+                      llamando a `mesa_seleccionada.esta_disponible()` y `mesa_seleccionada.reservar_hora()`.
+                      Estos métodos operan de la misma manera, sin importar si la mesa es General o VIP,
+                      demostrando la uniformidad de la interfaz.
         """
-        # Precondición: Los campos requeridos deben estar completos.
         if not all([cliente_nombre, fecha_str, hora, numero_mesa]):
             print("❌ Error: La reservación no se guarda porque faltan datos. Por favor, complete todos los campos.")
             return None
 
-        # Proceso Alternativo / Situaciones de Error: Validación de fecha y hora.
         if not self._validar_fecha(fecha_str):
-            print("❌ Error: Formato de fecha inválido. Use YYYY-MM-DD.")
+            print("❌ Error: Formato de fecha inválido. UsebeginPath-MM-DD.")
             return None
         if not self._validar_hora(hora):
             print(f"❌ Error: Hora inválida. El horario de reservas es de {self.horario_inicio}:00 a {self.horario_fin}:00.")
             return None
 
-        # Búsqueda de la mesa seleccionada.
         mesa_seleccionada = None
-        for mesa in self.mesas:
+        for mesa in self.mesas: # Iterando sobre objetos de tipo MesaBase
             if mesa.numero == numero_mesa:
                 mesa_seleccionada = mesa
                 break
 
-        # Situación de Error: Mesa no encontrada.
         if not mesa_seleccionada:
             print(f"❌ Error: Mesa {numero_mesa} no encontrada.")
             return None
 
-        # Situación de Error: Mesa no disponible en la hora/fecha.
-        # Utiliza el método encapsulado de Mesa para verificar disponibilidad.
         if not mesa_seleccionada.esta_disponible(fecha_str, hora, self.horario_inicio, self.horario_fin):
             print(f"❌ Error: La mesa {numero_mesa} no está disponible el {fecha_str} a las {hora}:00.")
             return None
 
-        # Proceso Estándar: Si todas las validaciones son exitosas.
-        # Utiliza el método encapsulado de Mesa para marcar la hora como reservada.
         if mesa_seleccionada.reservar_hora(fecha_str, hora, self.horario_inicio, self.horario_fin):
             nueva_reserva = Reserva(cliente_nombre, fecha_str, hora, mesa_seleccionada)
-            self.reservas.append(nueva_reserva) # Agrega la nueva reserva a la lista del sistema.
-            # Postcondición: La reservación ha quedado guardada en el sistema.
+            self.reservas.append(nueva_reserva)
             print(f"✅ ¡Reservación exitosa! {nueva_reserva}")
             return nueva_reserva
         else:
-            # Error inesperado si reservar_hora retorna False a pesar de las verificaciones previas.
             print("❌ Error inesperado al intentar reservar la mesa.")
             return None
 
     def eliminar_reservacion(self, fecha_str, hora, folio_mesa):
         """
-        Método público: Implementa el Caso de Uso "Eliminar reservación".
-        Permite al empleado eliminar una reservación existente.
-        Encapsulamiento: Centraliza la lógica de búsqueda, confirmación y eliminación de una reserva,
-        así como la actualización del estado de la mesa.
+        Caso de Uso: Eliminar reservación.
+        Polimorfismo: Al liberar la mesa (`reserva_encontrada.mesa.liberar_hora()`),
+                      el método `liberar_hora` se comporta igual para cualquier tipo de Mesa,
+                      porque está implementado en la clase base.
         """
-        # Precondición: Los datos para identificar la reserva deben estar presentes.
         if not all([fecha_str, hora, folio_mesa]):
             print("❌ Error: Por favor, complete todos los datos para eliminar la reserva.")
             return False
 
-        # Proceso Alternativo / Situaciones de Error: Validación de fecha y hora.
         if not self._validar_fecha(fecha_str):
-            print("❌ Error: Formato de fecha inválido. Use YYYY-MM-DD.")
+            print("❌ Error: Formato de fecha inválido. UsebeginPath-MM-DD.")
             return False
         if not self._validar_hora(hora):
             print(f"❌ Error: Hora inválida. El horario de reservas es de {self.horario_inicio}:00 a {self.horario_fin}:00.")
             return False
 
-        # Búsqueda de la reserva a eliminar.
         reserva_encontrada = None
         for reserva in self.reservas:
-            # Comparamos folio, fecha y hora para asegurar que es la reserva correcta.
             if (reserva.folio == folio_mesa and
                 reserva.fecha_str == fecha_str and
                 reserva.hora == hora):
                 reserva_encontrada = reserva
                 break
 
-        # Situación de Error: Reserva no encontrada.
         if not reserva_encontrada:
             print(f"❌ Error: No se encontró una reservación con el folio '{folio_mesa}' "
                   f"para el {fecha_str} a las {hora}:00.")
             return False
 
-        # Paso de Confirmación (simulado, según tus descripciones).
         confirmacion = input(f"¿Está seguro que desea eliminar la reserva de {reserva_encontrada.cliente_nombre} "
-                             f"para la mesa {reserva_encontrada.mesa.numero} el {reserva_encontrada.fecha_str} a las {reserva_encontrada.hora}:00? (s/n): ").lower()
+                             f"para {reserva_encontrada.mesa} el {reserva_encontrada.fecha_str} a las {reserva_encontrada.hora}:00? (s/n): ").lower()
         if confirmacion != 's':
             print("🚫 Eliminación cancelada.")
             return False
 
-        # Proceso Estándar: Si se confirma.
-        self.reservas.remove(reserva_encontrada) # Elimina el objeto Reserva de la lista del sistema.
-        # Postcondición: Se ha eliminado la reservación.
-
-        # Actualiza la disponibilidad de la mesa utilizando el método encapsulado de Mesa.
+        self.reservas.remove(reserva_encontrada)
         reserva_encontrada.mesa.liberar_hora(fecha_str, hora)
-        # Postcondición: El sistema muestra la mesa como "disponible" en "Ver disponibilidad".
         print(f"✅ Reservación para '{reserva_encontrada.cliente_nombre}' eliminada exitosamente.")
         return True
 
-# --- Simulación de la interacción del Empleado (Programa Principal) ---
+# --- SIMULACIÓN DE INTERACCIÓN DEL EMPLEADO ---
 
 def mostrar_menu():
     """
     Función auxiliar: Muestra las opciones disponibles para el Empleado.
-    No es parte de ninguna clase, actúa como la "interfaz" de consola.
     """
     print("\n--- Menú del Sistema de Reservas ---")
     print("1. Ver Disponibilidad")
@@ -393,46 +318,34 @@ def mostrar_menu():
     print("-----------------------------------")
 
 if __name__ == "__main__":
-    # Este bloque se ejecuta solo cuando el script se inicia directamente,
-    # no cuando se importa como un módulo en otro archivo.
-    # Es el punto de entrada de nuestro programa.
-
-    restaurante = Restaurante() # Crea una instancia de nuestro sistema de reservas.
+    restaurante = Restaurante() # Instancia del sistema de reservas.
 
     while True:
-        # Bucle principal del programa: Mantiene la aplicación en ejecución
-        # y permite al usuario interactuar repetidamente.
         mostrar_menu()
         opcion = input("Seleccione una opción: ")
 
         if opcion == '1':
-            # Ejecuta el Caso de Uso "Ver Disponibilidad".
             fecha_disp = input("Ingrese la fecha para ver disponibilidad (YYYY-MM-DD): ")
             restaurante.ver_disponibilidad(fecha_disp)
-            # Llama al método público de la clase Restaurante.
 
         elif opcion == '2':
-            # Ejecuta el Caso de Uso "Hacer Reservación".
             print("\n--- Hacer Reservación ---")
             cliente_nombre = input("Nombre del cliente: ")
             fecha_reserva = input("Fecha de la reserva (YYYY-MM-DD): ")
             try:
-                # Se utiliza try-except para manejar errores si el usuario no ingresa un número entero.
                 hora_reserva = int(input(f"Hora de la reserva ({restaurante.horario_inicio}-{restaurante.horario_fin}): "))
             except ValueError:
                 print("❌ Hora inválida. Debe ser un número entero.")
-                continue # Vuelve al inicio del bucle para mostrar el menú de nuevo.
+                continue
             try:
                 numero_mesa = int(input("Número de mesa deseada: "))
             except ValueError:
                 print("❌ Número de mesa inválido. Debe ser un número entero.")
-                continue # Vuelve al inicio del bucle.
+                continue
 
             restaurante.hacer_reservacion(cliente_nombre, fecha_reserva, hora_reserva, numero_mesa)
-            # Llama al método público de la clase Restaurante.
 
         elif opcion == '3':
-            # Ejecuta el Caso de Uso "Eliminar Reservación".
             print("\n--- Eliminar Reservación ---")
             folio_eliminar = input("Folio de la reserva a eliminar (ej. VX1, GX2): ")
             fecha_eliminar = input("Fecha de la reserva (YYYY-MM-DD): ")
@@ -443,14 +356,10 @@ if __name__ == "__main__":
                 continue
 
             restaurante.eliminar_reservacion(fecha_eliminar, hora_eliminar, folio_eliminar)
-            # Llama al método público de la clase Restaurante. La lógica de búsqueda
-            # y validación de la reserva está encapsulada dentro de este método.
 
         elif opcion == '4':
-            # Opción para salir del programa.
             print("Saliendo del sistema. ¡Hasta luego!")
-            break # Rompe el bucle 'while True', terminando la ejecución del programa.
+            break
 
         else:
-            # Manejo de opción no válida.
             print("Opción no válida. Por favor, intente de nuevo.")
