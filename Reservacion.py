@@ -1,9 +1,9 @@
 """
 @file reservacion.py
-@author A.G.R
-@brief Sitema de Reservaciones de mesas para un Restaurante.
+@author Stratatek Software Solutions
+@brief Sitema de Reservación de Mesas en/para un Restaurante.
 
-@version 0.1
+@version 0.5
 @date 2025-07-02
 
 @copyright Copyright (c) 2025
@@ -11,17 +11,48 @@
 # Reservacion.py
 
 
+
 import datetime
 
-# Importa el módulo datetime para manejar fechas y horas.
+# =======================================================================================
+# Módulo: datetime
+# Propósito: Este módulo proporciona clases para trabajar con fechas y horas.
+# Es crucial para validar formatos de fecha, realizar comparaciones y otras
+# operaciones temporales de manera robusta, en lugar de manejar fechas
+# como simples cadenas de texto que no ofrecen validación inherente.
+# =======================================================================================
 
-# --- CLASES ---
+# --- CLASES DEL MODELO DE NEGOCIO ---
+# Estas clases representan las entidades principales de nuestro sistema de reservas
+# y encapsulan su estado y comportamiento.
 
 class MesaBase:
     """
-    Clase Base para representar cualquier tipo de mesa en el restaurante.
-    Encapsulamiento: Agrupa los datos fundamentales de una mesa (número, disponibilidad) y
-    los comportamientos básicos de gestión de su estado de disponibilidad.
+    ===================================================================================
+    Clase MesaBase: Base para la Abstracción y Herencia de Mesas
+    -----------------------------------------------------------------------------------
+    Propósito: Define las características y comportamientos fundamentales que
+               cualquier tipo de mesa en el restaurante debe tener. Actúa como
+               la clase base para otras especializaciones de mesas (General, VIP).
+    Principios POO:
+        - Abstracción: Oculta los detalles internos de cómo se gestiona la
+                       disponibilidad de una mesa (a través del diccionario
+                       'disponibilidad'). Proporciona una interfaz simple para
+                       reservar, liberar y verificar disponibilidad.
+        - Encapsulamiento:
+            - **Atributos:**
+                - `self.numero`: **Público**. Accesible directamente para consulta.
+                - `self.disponibilidad`: **Gestionado/Semi-público**. No tiene un guion bajo,
+                  pero su manipulación está estrictamente controlada por los métodos
+                  de la clase (`inicializar_dia`, `reservar_hora`, `liberar_hora`).
+                  Aunque es accesible directamente, se espera que los desarrolladores
+                  lo modifiquen solo a través de los métodos proporcionados para
+                  mantener la integridad.
+            - **Métodos:**
+                - `__init__`, `__str__`, `inicializar_dia`, `reservar_hora`, `liberar_hora`,
+                  `esta_disponible`, `es_vip_mesa`: Todos estos son **públicos**.
+                  Son la interfaz designada para interactuar con el estado de la mesa.
+    ===================================================================================
     """
 
     def __init__(self, numero):
@@ -31,11 +62,11 @@ class MesaBase:
             numero (int): El número identificador único de la mesa.
         """
         self.numero = numero
-        self.disponibilidad = {} # Gestionado internamente.
+        self.disponibilidad = {}
 
     def __str__(self):
         """
-        Método especial para la representación en cadena.
+        Método especial (dunder method): Define la representación en cadena del objeto.
         Este será sobrescrito por las clases hijas para añadir especificidad.
         """
         return f"Mesa {self.numero}"
@@ -50,7 +81,6 @@ class MesaBase:
     def reservar_hora(self, fecha_str, hora, horario_inicio, horario_fin):
         """
         Método público: Intenta marcar una hora como reservada.
-        Encapsulamiento: Controla cómo se modifica el estado de disponibilidad.
         """
         self.inicializar_dia(fecha_str, horario_inicio, horario_fin)
         if hora in self.disponibilidad[fecha_str] and self.disponibilidad[fecha_str][hora]:
@@ -61,7 +91,6 @@ class MesaBase:
     def liberar_hora(self, fecha_str, hora):
         """
         Método público: Libera una hora previamente reservada.
-        Encapsulamiento: Controla cómo se modifica el estado de disponibilidad.
         """
         if fecha_str in self.disponibilidad and hora in self.disponibilidad[fecha_str]:
             self.disponibilidad[fecha_str][hora] = True
@@ -71,118 +100,210 @@ class MesaBase:
     def esta_disponible(self, fecha_str, hora, horario_inicio, horario_fin):
         """
         Método público: Consulta la disponibilidad de la mesa.
-        Encapsulamiento: Controla cómo se accede al estado de disponibilidad.
         """
         self.inicializar_dia(fecha_str, horario_inicio, horario_fin)
         return self.disponibilidad.get(fecha_str, {}).get(hora, False)
 
-    # Nuevo método para obtener si es VIP, útil para el folio de reserva
-    # Esto es un "getter" básico para un atributo.
     def es_vip_mesa(self):
-        """Método abstracto que las subclases deben implementar."""
+        """
+        Método abstracto (polimórfico): Las subclases deben implementar este método.
+        """
         raise NotImplementedError("Las subclases deben implementar este método para indicar si son VIP.")
 
 
 class MesaGeneral(MesaBase):
     """
-    Clase hija: Representa una mesa de la zona general.
-    Herencia: Hereda de MesaBase.
-    Polimorfismo: Sobreescribe __str__ para su representación específica.
+    ===================================================================================
+    Clase MesaGeneral: Especialización de Mesa para Zonas Generales
+    -----------------------------------------------------------------------------------
+    Tipo de Herencia: Herencia Simple (o Monohilo).
+                      `MesaGeneral` hereda directamente de una única clase padre, `MesaBase`.
+    -----------------------------------------------------------------------------------
+    Qué Hereda de MesaBase:
+        - **Atributos:**
+            - `self.numero`: Hereda el atributo para identificar el número de la mesa.
+            - `self.disponibilidad`: Hereda el diccionario para gestionar el estado de reserva.
+        - **Métodos:**
+            - `inicializar_dia()`: Hereda la lógica para preparar la disponibilidad de un día.
+            - `reservar_hora()`: Hereda la lógica para marcar una hora como reservada.
+            - `liberar_hora()`: Hereda la lógica para liberar una hora.
+            - `esta_disponible()`: Hereda la lógica para consultar la disponibilidad.
+            - Todos estos métodos heredados operan con `self.disponibilidad` y `self.numero`
+              definidos en la clase base, reutilizando el comportamiento central de la mesa.
+
+    Principios POO:
+        - Herencia: `MesaGeneral` "es un tipo de" `MesaBase`.
+        - Polimorfismo: Sobreescribe el método `__str__` y `es_vip_mesa` de su clase base
+                        para proporcionar una representación y un estado específico para
+                        las mesas generales.
+        - Encapsulamiento: Hereda el encapsulamiento de `MesaBase`.
+    ===================================================================================
     """
     def __init__(self, numero):
-        super().__init__(numero) # Llama al constructor de la clase padre.
+        """
+        Constructor de MesaGeneral.
+        Args:
+            numero (int): El número de la mesa.
+        """
+        super().__init__(numero) # Llama al constructor de la clase padre (MesaBase)
+                                 # para inicializar 'numero' y 'disponibilidad'.
 
     def __str__(self):
-        return f"Mesa {self.numero} (General)" # Representación específica para mesas generales.
+        """
+        Sobreescribe el método __str__ de MesaBase.
+        Proporciona una representación en cadena específica para mesas generales.
+        """
+        return f"Mesa {self.numero} (General)"
 
     def es_vip_mesa(self):
+        """
+        Implementación del método polimórfico es_vip_mesa para MesaGeneral.
+        Returns:
+            bool: Siempre False, ya que es una mesa general.
+        """
         return False
 
 
 class MesaVIP(MesaBase):
     """
-    Clase hija: Representa una mesa de la zona VIP.
-    Herencia: Hereda de MesaBase.
-    Polimorfismo: Sobreescribe __str__ para su representación específica.
+    ===================================================================================
+    Clase MesaVIP: Especialización de Mesa para Zonas VIP
+    -----------------------------------------------------------------------------------
+    Tipo de Herencia: Herencia Simple (o Monohilo).
+                      `MesaVIP` hereda directamente de una única clase padre, `MesaBase`.
+    -----------------------------------------------------------------------------------
+    Qué Hereda de MesaBase:
+        - **Atributos:**
+            - `self.numero`: Hereda el atributo para identificar el número de la mesa.
+            - `self.disponibilidad`: Hereda el diccionario para gestionar el estado de reserva.
+        - **Métodos:**
+            - `inicializar_dia()`: Hereda la lógica para preparar la disponibilidad de un día.
+            - `reservar_hora()`: Hereda la lógica para marcar una hora como reservada.
+            - `liberar_hora()`: Hereda la lógica para liberar una hora.
+            - `esta_disponible()`: Hereda la lógica para consultar la disponibilidad.
+            - Al igual que `MesaGeneral`, reutiliza el comportamiento básico de gestión de la mesa.
+
+    Principios POO:
+        - Herencia: `MesaVIP` "es un tipo de" `MesaBase`.
+        - Polimorfismo: Sobreescribe el método `__str__` y `es_vip_mesa` de su clase base
+                        para su representación y estado específico.
+        - Encapsulamiento: Hereda el encapsulamiento de `MesaBase`.
+    ===================================================================================
     """
     def __init__(self, numero):
-        super().__init__(numero) # Llama al constructor de la clase padre.
+        """
+        Constructor de MesaVIP.
+        Args:
+            numero (int): El número de la mesa.
+        """
+        super().__init__(numero) # Llama al constructor de la clase padre (MesaBase)
+                                 # para inicializar 'numero' y 'disponibilidad'.
 
     def __str__(self):
-        return f"Mesa {self.numero} (VIP)" # Representación específica para mesas VIP.
+        """
+        Sobreescribe el método __str__ de MesaBase.
+        Proporciona una representación en cadena específica para mesas VIP.
+        """
+        return f"Mesa {self.numero} (VIP)"
 
     def es_vip_mesa(self):
+        """
+        Implementación del método polimórfico es_vip_mesa para MesaVIP.
+        Returns:
+            bool: Siempre True, ya que es una mesa VIP.
+        """
         return True
 
 
 class Reserva:
     """
-    Clase Reserva: Representa una reservación.
-    Encapsulamiento: Agrupa los detalles de la reserva y la lógica de folio.
+    ===================================================================================
+    Clase Reserva: Representa una reservación individual.
+    -----------------------------------------------------------------------------------
+    Principios POO:
+        - Encapsulamiento:
+            - **Atributos:**
+                - `cliente_nombre`, `fecha_str`, `hora`, `mesa`, `folio`: Todos son **públicos**.
+                  Aunque `folio` se genera internamente, es parte de la información
+                  que se espera sea accesible para identificar la reserva.
+            - **Métodos:**
+                - `__init__`, `__str__`: Son **públicos**.
+                - `_generar_folio`: **Protegido (por convención)**. El prefijo `_`
+                  indica que es un método de uso interno de la clase y no forma parte
+                  de la interfaz pública destinada a ser llamada desde fuera de la clase.
+        - Abstracción: Oculta los detalles de cómo se genera el folio.
+    ===================================================================================
     """
+
     def __init__(self, cliente_nombre, fecha_str, hora, mesa):
+        """
+        Constructor de la clase Reserva.
+        Args:
+            cliente_nombre (str): Nombre del cliente.
+            fecha_str (str): Fecha de la reserva.
+            hora (int): Hora de la reserva.
+            mesa (MesaBase): El objeto Mesa (MesaGeneral o MesaVIP) asociado.
+                             Esto es una relación de **composición/asociación**,
+                             no herencia, ya que una Reserva "tiene una" Mesa.
+        """
         self.cliente_nombre = cliente_nombre
         self.fecha_str = fecha_str
         self.hora = hora
-        self.mesa = mesa # Referencia al objeto Mesa (MesaGeneral o MesaVIP).
-        self.folio = self._generar_folio() # Genera folio usando el método interno.
+        self.mesa = mesa
+        self.folio = self._generar_folio()
 
     def _generar_folio(self):
-        """
-        Método "protegido": Genera el folio de la reserva.
-        Encapsulamiento: Lógica interna para la generación del folio.
-        Polimorfismo (implícito): Usa el método es_vip_mesa() de la mesa,
-        que se comporta diferente si la mesa es MesaVIP o MesaGeneral.
-        """
         prefijo = "VX" if self.mesa.es_vip_mesa() else "GX"
         return f"{prefijo}{self.mesa.numero}"
 
     def __str__(self):
-        """
-        Método especial para la representación en cadena del objeto Reserva.
-        """
         return (f"Reserva para {self.cliente_nombre} "
                 f"en {self.mesa} el {self.fecha_str} a las {self.hora}:00. Folio: {self.folio}")
 
 
 class Restaurante:
     """
-    Clase Restaurante: Gestiona mesas y reservaciones.
-    Clase Controladora: Coordina las interacciones.
-    Encapsulamiento: Oculta las colecciones de mesas y reservas y su gestión interna.
-    Abstracción: Los métodos de caso de uso (ver_disponibilidad, hacer_reservacion, eliminar_reservacion)
-                 ocultan la complejidad subyacente.
+    ===================================================================================
+    Clase Restaurante: El Sistema de Gestión de Reservas Principal
+    -----------------------------------------------------------------------------------
+    Propósito: Actúa como el controlador central del sistema. Coordina las
+               interacciones entre las mesas y las reservas. Es la interfaz
+               principal con la que interactuará el "Empleado" (usuario del sistema).
+    Principios POO:
+        - Encapsulamiento:
+            - **Atributos:**
+                - `mesas`, `reservas`, `horario_inicio`, `horario_fin`: Todos son **públicos**.
+                  Aunque son accesibles, la manipulación de `mesas` y `reservas` está
+                  diseñada para hacerse a través de los métodos de la clase
+                  (`hacer_reservacion`, `eliminar_reservacion`) para mantener la
+                  integridad del sistema.
+            - **Métodos:**
+                - `__init__`, `ver_disponibilidad`, `hacer_reservacion`,
+                  `eliminar_reservacion`: Son **públicos**. Constituyen la interfaz
+                  principal del sistema.
+                - `_validar_hora`, `_validar_fecha`: Son **protegidos (por convención)**.
+                  El prefijo `_` indica que son métodos auxiliares internos.
+        - Abstracción: Proporciona una interfaz de alto nivel para los casos de uso.
+        - Polimorfismo: Gestiona objetos de `MesaGeneral` y `MesaVIP` de manera
+                        uniforme a través de su clase base `MesaBase`.
+    ===================================================================================
     """
 
     def __init__(self):
-        """
-        Constructor de la clase Restaurante.
-        Inicializa la lista de mesas (usando las clases hijas) y la lista de reservas.
-        """
         self.mesas = []
-        # Crea 5 mesas generales (numeradas del 1 al 5)
         for i in range(1, 6):
-            self.mesas.append(MesaGeneral(i)) # Instancia de MesaGeneral
-        # Crea 5 mesas VIP (numeradas del 6 al 10)
+            self.mesas.append(MesaGeneral(i))
         for i in range(1, 6):
-            self.mesas.append(MesaVIP(5 + i)) # Instancia de MesaVIP
+            self.mesas.append(MesaVIP(5 + i))
 
         self.reservas = []
         self.horario_inicio = 13
         self.horario_fin = 16
 
     def _validar_hora(self, hora):
-        """
-        Método "protegido": Valida si una hora está dentro del horario.
-        Encapsulamiento: Lógica auxiliar interna.
-        """
         return self.horario_inicio <= hora <= self.horario_fin
 
     def _validar_fecha(self, fecha_str):
-        """
-        Método "protegido": Valida el formato de la fecha.
-        Encapsulamiento: Lógica auxiliar interna.
-        """
         try:
             datetime.datetime.strptime(fecha_str, "%Y-%m-%d")
             return True
@@ -190,12 +311,6 @@ class Restaurante:
             return False
 
     def ver_disponibilidad(self, fecha_str):
-        """
-        Caso de Uso: Ver disponibilidad.
-        Polimorfismo: Itera sobre objetos MesaBase (que pueden ser MesaGeneral o MesaVIP)
-                      y llama a sus métodos, como __str__ y esta_disponible, que se comportan
-                      de forma polimórfica según el tipo real del objeto.
-        """
         if not self._validar_fecha(fecha_str):
             print("❌ Error: Formato de fecha inválido. UsebeginPath-MM-DD.")
             return
@@ -203,11 +318,8 @@ class Restaurante:
         print(f"\n--- Disponibilidad para el {fecha_str} ---")
         disponibilidad_encontrada = False
 
-        # El ordenamiento se hace por si es VIP y luego por número de mesa
         for mesa in sorted(self.mesas, key=lambda m: (not m.es_vip_mesa(), m.numero)):
             mesa.inicializar_dia(fecha_str, self.horario_inicio, self.horario_fin)
-            # Polimorfismo: Aquí, `mesa.__str__()` se llamará automáticamente,
-            # lo que significa que se ejecutará el __str__ de MesaGeneral o MesaVIP.
             print(f"\n{mesa}:")
             horas_disponibles_mesa = []
             for hora in range(self.horario_inicio, self.horario_fin + 1):
@@ -221,13 +333,6 @@ class Restaurante:
         print("---------------------------------")
 
     def hacer_reservacion(self, cliente_nombre, fecha_str, hora, numero_mesa):
-        """
-        Caso de Uso: Hacer reservación.
-        Polimorfismo: Se interactúa con la `mesa_seleccionada` (que es de tipo MesaBase)
-                      llamando a `mesa_seleccionada.esta_disponible()` y `mesa_seleccionada.reservar_hora()`.
-                      Estos métodos operan de la misma manera, sin importar si la mesa es General o VIP,
-                      demostrando la uniformidad de la interfaz.
-        """
         if not all([cliente_nombre, fecha_str, hora, numero_mesa]):
             print("❌ Error: La reservación no se guarda porque faltan datos. Por favor, complete todos los campos.")
             return None
@@ -240,7 +345,7 @@ class Restaurante:
             return None
 
         mesa_seleccionada = None
-        for mesa in self.mesas: # Iterando sobre objetos de tipo MesaBase
+        for mesa in self.mesas:
             if mesa.numero == numero_mesa:
                 mesa_seleccionada = mesa
                 break
@@ -263,12 +368,6 @@ class Restaurante:
             return None
 
     def eliminar_reservacion(self, fecha_str, hora, folio_mesa):
-        """
-        Caso de Uso: Eliminar reservación.
-        Polimorfismo: Al liberar la mesa (`reserva_encontrada.mesa.liberar_hora()`),
-                      el método `liberar_hora` se comporta igual para cualquier tipo de Mesa,
-                      porque está implementado en la clase base.
-        """
         if not all([fecha_str, hora, folio_mesa]):
             print("❌ Error: Por favor, complete todos los datos para eliminar la reserva.")
             return False
@@ -304,12 +403,9 @@ class Restaurante:
         print(f"✅ Reservación para '{reserva_encontrada.cliente_nombre}' eliminada exitosamente.")
         return True
 
-# --- SIMULACIÓN DE INTERACCIÓN DEL EMPLEADO ---
+# --- SIMULACIÓN DE LA INTERACCIÓN DEL EMPLEADO (PROGRAMA PRINCIPAL) ---
 
 def mostrar_menu():
-    """
-    Función auxiliar: Muestra las opciones disponibles para el Empleado.
-    """
     print("\n--- Menú del Sistema de Reservas ---")
     print("1. Ver Disponibilidad")
     print("2. Hacer Reservación")
@@ -318,7 +414,7 @@ def mostrar_menu():
     print("-----------------------------------")
 
 if __name__ == "__main__":
-    restaurante = Restaurante() # Instancia del sistema de reservas.
+    restaurante = Restaurante()
 
     while True:
         mostrar_menu()
