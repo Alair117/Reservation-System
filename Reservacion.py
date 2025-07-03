@@ -52,7 +52,7 @@ class MesaBase:
         Método público: Intenta marcar una hora como reservada.
         Encapsulamiento: Controla cómo se modifica el estado de disponibilidad.
         """
-        self.inicializar_day(fecha_str, horario_inicio, horario_fin)
+        self.inicializar_dia(fecha_str, horario_inicio, horario_fin)
         if hora in self.disponibilidad[fecha_str] and self.disponibilidad[fecha_str][hora]:
             self.disponibilidad[fecha_str][hora] = False
             return True
